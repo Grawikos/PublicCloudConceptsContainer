@@ -1,0 +1,72 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches:
+      - main
+      - test
+
+env:
+  PROJECT_ID: firstproject-450511
+  GKE_ZONE: europe-west4
+  GAR_REPO: myregistry
+  GKE_CLUSTER: my-gke-cluster
+  GAR_ZONE: europe-west4
+  IMAGE: my-app
+
+jobs:
+  setup-build-publish-deploy:
+    name: Setup, Build, Publish, and Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    # Setup gcloud CLI
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v0'
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    # Authenticate Docker with GAR
+    - name: Docker configuration
+      run: |-
+        gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://$GAR_ZONE-docker.pkg.dev
+
+    # Set up GKE credentials
+    - name: Set up GKE credentials
+      uses: google-github-actions/get-gke-credentials@v0
+      with:
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GKE_ZONE }}
+
+    # Set IMAGE_TAG based on branch (Blue for main, Green for test)
+    - name: Set Deployment Environment
+      run: |
+        if [[ "${{ github.ref_name }}" == "main" ]]; then
+          echo "IMAGE_TAG=blue" >> $GITHUB_ENV
+        else
+          echo "IMAGE_TAG=green" >> $GITHUB_ENV
+        fi
+
+    # Build the Docker image
+    - name: Build
+      run: |-
+        docker build \
+          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG" \
+          --build-arg GITHUB_SHA="$GITHUB_SHA" \
+          --build-arg GITHUB_REF="$GITHUB_REF" \
+          .
+
+    # Push the Docker image to Google Artifact Registry
+    - name: Publish
+      run: |-
+        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG"
+
+    # Deploy the image to Kubernetes
+    - name: Deploy
+      run: |-
+        kubectl apply -f deploy.yml
+        kubectl get pods
