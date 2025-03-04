@@ -69,4 +69,5 @@ jobs:
     - name: Deploy
       run: |-
         kubectl apply -f deploy.yml
+        kubectl rollout restart deployment app-$IMAGE_TAG
         kubectl get pods
