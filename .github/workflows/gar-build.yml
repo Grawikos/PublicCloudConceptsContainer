@@ -28,6 +28,10 @@ jobs:
     - name: Configure Docker
       run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev
 
+    - name: Install GKE auth plugin
+      run: |
+        gcloud components install gke-gcloud-auth-plugin --quiet
+
     - name: Build and Push Docker Image
       run: |
         IMAGE_TAG=${{ github.ref_name == 'main' && 'blue' || 'green' }}
