@@ -12,7 +12,8 @@ env:
   GAR_REPO: myregistry
   GKE_CLUSTER: my-gke-cluster
   GAR_ZONE: europe-west4
-  IMAGE: micro
+  IMAGE: my-app
+  IMAGE_TAG: test
 
 jobs:
   setup-build-publish-deploy:
@@ -42,15 +43,6 @@ jobs:
         cluster_name: ${{ env.GKE_CLUSTER }}
         location: ${{ env.GKE_ZONE }}
 
-    # Determine Image Tag Based on Branch (Blue or Green)
-    - name: Set Deployment Environment
-      run: |
-        if [[ "${{ github.ref_name }}" == "main" ]]; then
-          echo "IMAGE_TAG=blue" >> $GITHUB_ENV
-        else
-          echo "IMAGE_TAG=green" >> $GITHUB_ENV
-        fi
-
     # Build the Docker image
     - name: Build
       run: |-
@@ -59,7 +51,6 @@ jobs:
           --build-arg GITHUB_SHA="$GITHUB_SHA" \
           --build-arg GITHUB_REF="$GITHUB_REF" \
           .
-
     # Push the Docker image to Google Artifact Registry
     - name: Publish
       run: |-
@@ -68,8 +59,7 @@ jobs:
     # Deploy the image to Kubernetes
     - name: Deploy
       run: |-
-        kubectl apply -f k8s/deployment-$IMAGE_TAG.yaml  # Deploys blue or green
-        kubectl apply -f k8s/service.yaml  # Load balancer for switching
+        kubectl apply -f deploy.yml  # Applies deployment as defined
         kubectl get pods
 
 
