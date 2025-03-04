@@ -1,0 +1,46 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches:
+      - main
+      - test
+
+env:
+  PROJECT_ID: firstproject-450511
+  GAR_LOCATION: europe-west4
+  REPOSITORY: myregistry
+  CLUSTER: my-gke-cluster
+  REGION: europe-west4
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Configure Docker
+      run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev
+
+    - name: Build and Push Docker Image
+      run: |
+        IMAGE_TAG=${{ github.ref_name == 'main' && 'blue' || 'green' }}
+        docker build -t ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/my-app:$IMAGE_TAG .
+        docker push ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/my-app:$IMAGE_TAG
+
+    - name: Set up kubectl
+      run: |
+        gcloud container clusters get-credentials ${{ env.CLUSTER }} --region ${{ env.REGION }}
+
+    - name: Deploy to GKE
+      run: |
+        IMAGE_TAG=${{ github.ref_name == 'main' && 'blue' || 'green' }}
+        kubectl apply -f $IMAGE_TAG-deployment.yaml
+
+
