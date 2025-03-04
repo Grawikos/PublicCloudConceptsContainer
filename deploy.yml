@@ -17,6 +17,7 @@ spec:
       containers:
       - name: my-app
         image: europe-west4-docker.pkg.dev/firstproject-450511/myregistry/my-app:blue
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
 
