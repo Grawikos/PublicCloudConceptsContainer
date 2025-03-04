@@ -7,7 +7,7 @@ on:
       - test
 
 env:
-  PROJECT_ID: firstproject-450511
+  PROJECT_ID: ${{ secrets.PROJECT_ID }}
   GKE_ZONE: europe-west4
   GAR_REPO: myregistry
   GKE_CLUSTER: my-gke-cluster
