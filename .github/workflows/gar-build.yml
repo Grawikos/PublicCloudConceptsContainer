@@ -30,7 +30,7 @@ jobs:
 
     - name: Install GKE auth plugin
       run: |
-        gcloud components install gke-gcloud-auth-plugin --quiet
+        sudo apt-get install google-cloud-cli-gke-gcloud-auth-plugin
 
     - name: Build and Push Docker Image
       run: |
